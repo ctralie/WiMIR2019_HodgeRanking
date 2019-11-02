@@ -1,0 +1,233 @@
+<!--Programmer: Chris Tralie!-->
+<!--Purpose: An interface for pairwise ranking of music!-->
+<html>
+<head>
+<script src = "blockloader.js"></script>
+<link rel="stylesheet" type="text/css" href="style.css">
+</head>
+<body>
+
+    <H2>
+        <p id = "ncomparisons"></p>
+    </H2>
+    <table cellpadding = 10>
+        <tr>
+            <td>
+                <table>
+                    <tr>
+                        <td>
+                            <button onclick="previous()">Previous</button> 
+                        </td>
+                        <td>
+                            <button onclick="next()">Next</button> 
+                        </td>
+                        <td>
+                            <button onclick="saveResults()">Save Results</button> 
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+    <table cellpadding = 10>
+        <tr>
+            <td>
+                <audio controls id="audio1"></audio>
+            </td>
+            <td>
+                <input type="range" min="-3" max="3" value="0" class="slider" id="scorer">
+            </td>
+            <td>
+                <audio controls id="audio2"></audio>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                    <p id="artist1"></p>
+                    <p id="title1"></p>
+                    <p id="genre1"></p>
+            </td>
+            <td>
+            </td>
+            <td>
+                <p id="artist2"></p>
+                <p id="title2"></p>
+                <p id="genre2"></p>
+            </td>
+        </tr>
+        <tr>
+            <td colspan=3>
+                <canvas id="pairscanvas" width=500 height=500></canvas>
+            </td>
+        </tr>
+    </table>
+    
+<script>
+    // Bostock's Fisher Yates implementation
+    // https://bost.ocks.org/mike/shuffle/
+    function shuffle(array) {
+        var m = array.length, t, i;
+        // While there remain elements to shuffle…
+        while (m) {
+            // Pick a remaining element…
+            i = Math.floor(Math.random() * m--);
+            // And swap it with the current element.
+            t = array[m];
+            array[m] = array[i];
+            array[i] = t;
+        }
+        return array;
+    }
+
+	let canvas = document.getElementById('pairscanvas');
+	let ctx = canvas.getContext("2d"); //For drawing
+
+    let study = "Study1";
+    let scorer = document.getElementById("scorer");
+    scorer.style.background = "red";
+    let range = 3;
+    scorer.min = -range;
+    scorer.max = range;
+    
+
+    let audio1 = document.getElementById("audio1");
+    let audio2 = document.getElementById("audio2");
+    audio1.style.backgroundColor = "black";
+    audio2.style.backgroundColor = "black";
+
+    const scorerfn = function() {
+        audio1.style.backgroundColor = "black";
+        audio2.style.backgroundColor = "black";
+        let r = Math.round(255*Math.abs(scorer.value)/range);
+        let border = Math.round(10*Math.abs(scorer.value)/range);
+        audio1.style.border = 0;
+        audio2.style.border = 0;
+        if (scorer.value < 0) {
+            audio1.style.backgroundColor = 'rgb('+r+','+0+',0)';
+            audio1.style.border = border;
+        }
+        else if (scorer.value > 0) {
+            audio2.style.backgroundColor = 'rgb('+r+','+0+',0)';
+            audio2.style.border = border;
+        }
+    }
+    scorer.onchange = scorerfn;
+    scorer.oninput = scorerfn;
+
+    let songs = BlockLoader.loadJSON(study + "/songs.json");
+    N = 0;
+    for (song in songs) {
+        N += 1;
+    }
+    let pairs = [];
+    let comparisons = [];
+    for (let i = 0; i < N; i++) {
+        for (let j = 1; j < N; j++) {
+            pairs.push([i, j]);
+            comparisons.push(null);
+        }
+    }
+    pairs = shuffle(pairs);
+    let cidx = 0;
+
+    function updateInfo() {
+        document.getElementById("ncomparisons").innerHTML = cidx + "/" + pairs.length + " Pairwise Comparisons Completed";
+        let song1 = songs[pairs[cidx][0]];
+        let song2 = songs[pairs[cidx][1]];
+        audio1.src = study + "/" + song1.filename;
+        document.getElementById("artist1").innerHTML = "<b>Artist</b>: " + song1.artist;
+        document.getElementById("title1").innerHTML = "<b>Title</b>: " + song1.title;
+        //document.getElementById("genre1").innerHTML = "<b>Genre</b>: " + song1.genre;
+        document.getElementById("artist2").innerHTML = "<b>Artist</b>: " + song2.artist;
+        document.getElementById("title2").innerHTML = "<b>Title</b>: " + song2.title;
+        //document.getElementById("genre2").innerHTML = "<b>Genre</b>: " + song2.genre;
+        audio2.src = study + "/" + song2.filename;
+
+        repaint();
+        scorerfn();
+    }
+    updateInfo();
+
+    function previous() {
+        cidx = cidx - 1;
+        cidx = Math.max(cidx, 0);
+        scorer.value = comparisons[cidx];
+        updateInfo();
+    }
+
+    function next() {
+        comparisons[cidx] = scorer.value;
+        cidx = cidx + 1;
+        cidx = Math.min(cidx, comparisons.length-1);
+        scorer.value = 0;
+        updateInfo();
+    }
+
+    // Draw all of the comparisons as squares
+	function repaint(){
+		const W = canvas.width;
+        const H = canvas.height;
+        const dw = Math.floor(Math.min(W, H)/N);
+        ctx.clearRect(0, 0, W, H); // Puts white over everything to clear it
+        
+        for (let k = 0; k <= cidx; k++) {
+            if (comparisons[k] === null) {
+                break;
+            }
+            for (let fac = 0; fac < 2; fac++) {
+                // Draw each pair and its symmetric pair
+                let i = pairs[k][0];
+                let j = pairs[k][1];
+                res = comparisons[k];
+                if (fac == 1) {
+                    i = pairs[k][1];
+                    j = pairs[k][0];
+                    res = -comparisons[k];
+                }
+                let r = Math.round(255*Math.abs(res)/range);
+                let b = 0;
+                if (res < 0) {
+                    b = r;
+                    r = 0;
+                }
+                ctx.fillStyle = 'rgb('+r+',0,'+b+')';
+                ctx.fillRect(dw*i, dw*j, dw, dw);
+            }
+
+        }
+		ctx.stroke();
+    }
+    
+
+    /**
+     * https://stackoverflow.com/questions/13405129/javascript-create-and-save-file
+     */
+     let saveResults = function(filename) {
+        if (filename === undefined) {
+            filename = "results.txt";
+        }
+        let data = "";
+        for (let i = 0; i < cidx; i++) {
+            data += pairs[i][0] + " " + pairs[i][1] + " " + comparisons[i] + "\n";
+        }
+        var file = new Blob([data], {type: "txt"});
+        if (window.navigator.msSaveOrOpenBlob) // IE10+
+            window.navigator.msSaveOrOpenBlob(file, filename);
+        else { // Others
+            var a = document.createElement("a"),
+                    url = URL.createObjectURL(file);
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(function() {
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);  
+            }, 0); 
+        }
+    }
+
+</script>
+
+</body>
+</html>
