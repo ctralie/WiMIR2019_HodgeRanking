@@ -55,7 +55,7 @@ def doTotalOrderExperiment(N, NComparisons, NQuant = -1):
     (s, I, H) = doHodge(R, W, Y, verbose=False)
     return getConsistencyRatios(Y, I, H, W)
 
-if __name__ == '__main__':
+if __name__ == '__main__2':
     np.random.seed(0)
     N = 50
     NTrials = 10
@@ -79,13 +79,17 @@ if __name__ == '__main__':
     plt.show()
 
 
-if __name__ == '__main__2':
-    np.random.seed(17)
-    R = sio.loadmat('R.mat')['R']
-    [R, Y] = [R[:, 0:2], R[:, 2]]
-    W = np.random.rand(len(Y))
-    #W = np.ones(len(Y))
-    (s, I, H) = doHodge(R, W, Y)
-    print(np.argsort(s))
-    
-    getConsistencyRatios(Y, I, H, W, verbose=True)
+if __name__ == '__main__':
+    import glob
+    files = glob.glob("Results/*")
+    for f in files:
+        #R = sio.loadmat('R.mat')['R']
+        R = np.loadtxt(f)
+        print(f, R.shape[0])
+        [R, Y] = [R[:, 0:2], R[:, 2]]
+        W = np.random.rand(len(Y))
+        #W = np.ones(len(Y))
+        (s, I, H) = doHodge(R, W, Y)
+        print(np.argsort(s))
+        
+        getConsistencyRatios(Y, I, H, W, verbose=True)
