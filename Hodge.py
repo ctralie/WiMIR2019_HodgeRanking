@@ -48,7 +48,7 @@ def makeDelta0(R):
     It is assumed that there is at least one edge incident
     on every vertex
     """
-    NVertices = np.max(R) + 1
+    NVertices = int(np.max(R)) + 1
     NEdges = R.shape[0]
     
     #Two entries per edge
@@ -68,7 +68,7 @@ def makeDelta0(R):
     return Delta
     
 
-def makeDelta1(R):
+def makeDelta1(R, verbose):
     """Make the delta1 coboundary matrix
     :param R: Edge list NEdges x 2. It is assumed that 
     there is at least one edge incident on every vertex
@@ -87,9 +87,10 @@ def makeDelta1(R):
     tic = time.time()
     (I, J, V) = get3CliquesBrute(Edges)
     toc = time.time()
-    print("Elapsed time 3 cliques brute: %g"%(toc - tic))
+    if verbose:
+        print("Elapsed time 3 cliques brute: %g"%(toc - tic))
     [I, J, V] = [a.flatten() for a in [I, J, V]]
-    TriNum = len(I)/3
+    TriNum = int(len(I)/3)
     Delta1 = sparse.coo_matrix((V, (I, J)), shape = (TriNum, NEdges)).tocsr()
     
     return Delta1
@@ -123,7 +124,7 @@ def doHodge(R, W, Y, verbose = False):
     if verbose:
         print("Making Delta1...")
     tic = time.time()
-    D1 = makeDelta1(R)
+    D1 = makeDelta1(R, verbose)
     toc = time.time()
     if verbose:
         print("Elapsed Time: %g seconds"%(toc-tic))
@@ -146,21 +147,3 @@ def doHodge(R, W, Y, verbose = False):
 
 def getWNorm(X, W):
     return np.sqrt(np.sum(W*X*X))
-
-
-#Do an experiment with a full 4-clique to make sure 
-#that delta0 and delta1 look right
-if __name__ == '__main__':
-    np.random.seed(10)
-    N = 600
-    I, J = np.meshgrid(np.arange(N), np.arange(N))
-    I = I[np.triu_indices(N, 1)]
-    J = J[np.triu_indices(N, 1)]
-    NEdges = len(I)
-    R = np.zeros((NEdges, 2))
-    R[:, 0] = J
-    R[:, 1] = I    
-    #R = R[np.random.permutation(R.shape[0])[0:R.shape[0]/2], :]
-    makeDelta1(R)
-    #print(makeDelta0(R).toarray())
-    #print(makeDelta1(R).toarray())

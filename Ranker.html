@@ -122,7 +122,7 @@
     let pairs = [];
     let comparisons = [];
     for (let i = 0; i < N; i++) {
-        for (let j = 1; j < N; j++) {
+        for (let j = i+1; j < N; j++) {
             pairs.push([i, j]);
             comparisons.push(null);
         }
